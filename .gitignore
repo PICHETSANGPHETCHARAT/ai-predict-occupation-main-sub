@@ -1,0 +1,9 @@
+env
+__pycache__
+logs/*
+!logs/.gitkeep
+results/*
+!results/.gitkeep
+model
+.env
+
