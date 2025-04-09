@@ -9,12 +9,11 @@ import mysql.connector
 import json
 from openai import OpenAI
 import uvicorn
+
+# === GPT Client ===
 import os
 open_api_key = os.getenv("OPENAI_API_KEY")
-# === GPT Client ===
-client = OpenAI(
-    api_key=open_api_key
-)
+client = openai.OpenAI(api_key=open_api_key)
 
 # === FastAPI Setup ===
 app = FastAPI()
@@ -246,4 +245,4 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
 
 # ✅ Run Server
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="10.100.100.208", port=5000, reload=True)
+    uvicorn.run("main:app", host="10.100.100.208", port=5000, reload=True)

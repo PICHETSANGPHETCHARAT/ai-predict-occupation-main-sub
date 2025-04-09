@@ -134,12 +134,9 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         โปรดตอบกลับด้วย ID ของสาขาอาชีพรองที่เหมาะสมที่สุดเพียงค่าเดียว ในรูปแบบ JSON: {{"occupation_sub_id": ID}}
         """
 
-        # ตั้งค่า API สำหรับ ChatGPT
         import os
         open_api_key = os.getenv("OPENAI_API_KEY")
-        client = OpenAI(
-            api_key=open_api_key
-        )
+        client = openai.OpenAI(api_key=open_api_key)
 
         # ใช้ OpenAI ใหม่ในการเรียก API
         completion = client.chat.completions.create(

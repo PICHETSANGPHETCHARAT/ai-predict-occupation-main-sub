@@ -4,7 +4,7 @@
 import pandas as pd
 
 # โหลดไฟล์ CSV จาก local (กรณีรันใน Colab ให้ upload ก่อน)
-file_path = "Updated_Occupation_Titles.csv"
+file_path = "dataforthaibert2.csv"
 df = pd.read_csv(file_path)
 
 # แสดงตัวอย่างข้อมูล
@@ -79,17 +79,37 @@ tokenized_dataset = tokenized_dataset.train_test_split(test_size=0.2)
 # ================================
 from transformers import TrainingArguments, Trainer
 
+# training_args = TrainingArguments(
+#     output_dir="./results",
+#     evaluation_strategy="epoch",
+#     save_strategy="epoch",
+#     learning_rate=2e-5,
+#     per_device_train_batch_size=4,
+#     per_device_eval_batch_size=8,
+#     num_train_epochs=5,
+#     weight_decay=0.01,
+#     logging_dir='./logs',
+#     no_cuda=True,  # บังคับให้ใช้ CPU เท่านั้น
+# )
 training_args = TrainingArguments(
     output_dir="./results",
-    evaluation_strategy="epoch",
-    save_strategy="epoch",
-    learning_rate=2e-5,
-    per_device_train_batch_size=4,
-    per_device_eval_batch_size=8,
-    num_train_epochs=5,
-    weight_decay=0.01,
+    evaluation_strategy="epoch",  # ประเมินผลทุกตอนจบ epoch
+    save_strategy="epoch",  # บันทึกโมเดลทุกตอนจบ epoch
+    learning_rate=3e-5,  # ปรับ learning rate ขึ้นเล็กน้อย
+    per_device_train_batch_size=8,  # เพิ่ม batch size สำหรับ CPU
+    per_device_eval_batch_size=8,  # เพิ่ม batch size สำหรับการประเมิน
+    num_train_epochs=7,  # เพิ่มจำนวน epochs
+    weight_decay=0.01,  # ค่า weight decay
     logging_dir='./logs',
-    no_cuda=True,  # บังคับให้ใช้ CPU เท่านั้น
+    no_cuda=True,  # บังคับให้ใช้ CPU
+    save_steps=500,  # ประเมินทุก 500 steps
+    eval_steps=500,  # ประเมินทุก 500 steps
+    gradient_accumulation_steps=2,  # สะสม gradient ทุก 2 steps
+    load_best_model_at_end=True,  # โหลดโมเดลที่ดีที่สุดหลังการฝึก
+    metric_for_best_model="accuracy",  # ใช้ accuracy เป็นตัวชี้วัด
+    greater_is_better=True,  # เลือกโมเดลที่มี accuracy สูงสุด
+    dataloader_num_workers=16,  # ใช้ 16 workers ในการโหลดข้อมูล
+    no_cuda=True,  # บังคับให้ใช้ CPU
 )
 
 trainer = Trainer(
