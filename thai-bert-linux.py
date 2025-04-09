@@ -98,7 +98,7 @@ training_args = TrainingArguments(
     learning_rate=3e-5,  # ปรับ learning rate ขึ้นเล็กน้อย
     per_device_train_batch_size=8,  # เพิ่ม batch size สำหรับ CPU
     per_device_eval_batch_size=8,  # เพิ่ม batch size สำหรับการประเมิน
-    num_train_epochs=7,  # เพิ่มจำนวน epochs
+    num_train_epochs=10,  # เพิ่มจำนวน epochs
     weight_decay=0.01,  # ค่า weight decay
     logging_dir='./logs',
     no_cuda=True,  # บังคับให้ใช้ CPU
@@ -109,7 +109,6 @@ training_args = TrainingArguments(
     metric_for_best_model="accuracy",  # ใช้ accuracy เป็นตัวชี้วัด
     greater_is_better=True,  # เลือกโมเดลที่มี accuracy สูงสุด
     dataloader_num_workers=16,  # ใช้ 16 workers ในการโหลดข้อมูล
-    no_cuda=True,  # บังคับให้ใช้ CPU
 )
 
 trainer = Trainer(
@@ -138,11 +137,20 @@ try:
     # ================================
     # STEP 6: บันทึกโมเดลและ LabelEncoder (สำหรับใช้ใน FastAPI)
     # ================================
-    model.save_pretrained("./model")
-    tokenizer.save_pretrained("./model")
+    model.save_pretrained("./model_thaibert")
+    tokenizer.save_pretrained("./model_thaibert")
 
+    import os
     import pickle
-    with open("labels.pkl", "wb") as f:
+
+    # ตรวจสอบว่าโฟลเดอร์ './model' มีอยู่หรือไม่
+    model_dir = "./model_thaibert"
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)  # หากไม่มีโฟลเดอร์นี้, สร้างมันขึ้นมา
+
+    # บันทึก LabelEncoder ไปในโฟลเดอร์ './model'
+    labels_file_path = os.path.join(model_dir, "labels.pkl")
+    with open(labels_file_path, "wb") as f:
         pickle.dump(le, f)
 
     print("✅ บันทึกโมเดลและ label encoder เรียบร้อยแล้ว")
