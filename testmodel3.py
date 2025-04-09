@@ -136,7 +136,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
 
         import os
         open_api_key = os.getenv("OPENAI_API_KEY")
-        client = openai.OpenAI(api_key=open_api_key)
+        client = OpenAI(api_key=open_api_key)
 
         # ใช้ OpenAI ใหม่ในการเรียก API
         completion = client.chat.completions.create(

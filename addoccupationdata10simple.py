@@ -8,7 +8,7 @@ load_dotenv()
 # ตั้งค่า API Key ของคุณ
 import os
 open_api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=open_api_key)
+client = OpenAI(api_key=open_api_key)
 
 # โหลดข้อมูลจากไฟล์ CSV
 file_path = "สาขาอาชีพรองพัฒนาAIสาขาอาชีพ.csv"

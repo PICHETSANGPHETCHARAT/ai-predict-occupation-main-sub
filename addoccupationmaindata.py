@@ -8,7 +8,7 @@ from dotenv import load_dotenv  # นำเข้า python-dotenv
 load_dotenv()
 # API Key สำหรับ OpenAI
 open_api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=open_api_key)
+client = OpenAI(api_key=open_api_key)
 
 # โหลดข้อมูลจากไฟล์ CSV
 file_path_new = "/Users/itpmac001/Documents/Python Code/Test/model_predict_occupation/สาขาอาชีพหลัก.csv"

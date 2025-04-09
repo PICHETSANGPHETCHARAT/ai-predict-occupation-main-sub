@@ -7,7 +7,7 @@ load_dotenv()
 # API Key สำหรับ OpenAI
 import os
 open_api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=open_api_key)
+client = OpenAI(api_key=open_api_key)
 
 # Function to generate job titles using ChatGPT API
 def generate_job_titles(occupation_name, existing_titles):

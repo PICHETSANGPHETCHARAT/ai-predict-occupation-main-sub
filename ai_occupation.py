@@ -17,7 +17,7 @@ load_dotenv()
 import os
 open_api_key = os.getenv("OPENAI_API_KEY")
 print(f"API Key: {open_api_key}")
-client = openai.OpenAI(api_key=open_api_key)
+client = OpenAI(api_key=open_api_key)
 
 # === FastAPI Setup ===
 app = FastAPI()
