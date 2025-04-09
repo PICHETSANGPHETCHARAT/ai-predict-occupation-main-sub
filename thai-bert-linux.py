@@ -78,6 +78,12 @@ tokenized_dataset = tokenized_dataset.train_test_split(test_size=0.2)
 # STEP 4: เทรนโมเดล (รองรับ CPU)
 # ================================
 from transformers import TrainingArguments, Trainer
+from sklearn.metrics import accuracy_score
+# ฟังก์ชันคำนวณ accuracy
+def compute_metrics(p):
+    predictions, labels = p
+    predictions = predictions.argmax(axis=-1)  # เปลี่ยนผลลัพธ์ที่ได้ให้เป็น class id
+    return {"accuracy": accuracy_score(labels, predictions)}
 
 # training_args = TrainingArguments(
 #     output_dir="./results",
@@ -106,9 +112,9 @@ training_args = TrainingArguments(
     eval_steps=500,  # ประเมินทุก 500 steps
     gradient_accumulation_steps=2,  # สะสม gradient ทุก 2 steps
     load_best_model_at_end=True,  # โหลดโมเดลที่ดีที่สุดหลังการฝึก
-    metric_for_best_model="accuracy",  # ใช้ accuracy เป็นตัวชี้วัด
-    greater_is_better=True,  # เลือกโมเดลที่มี accuracy สูงสุด
-    dataloader_num_workers=16,  # ใช้ 16 workers ในการโหลดข้อมูล
+    metric_for_best_model="eval_loss",  # ใช้ accuracy เป็นตัวชี้วัด
+    greater_is_better=False,  # เลือกโมเดลที่มี accuracy สูงสุด
+    dataloader_num_workers=8,  # ใช้ 8 workers ในการโหลดข้อมูล
 )
 
 trainer = Trainer(
@@ -117,6 +123,7 @@ trainer = Trainer(
     train_dataset=tokenized_dataset['train'],
     eval_dataset=tokenized_dataset['test'],
     tokenizer=tokenizer,
+    compute_metrics=compute_metrics,
 )
 
 # เพิ่มการจัดการข้อผิดพลาดเพื่อให้โค้ดไม่หยุดทำงานทันที
