@@ -2,6 +2,10 @@ import pandas as pd
 import openai
 import time
 import os
+from dotenv import load_dotenv  # นำเข้า python-dotenv
+
+# โหลด environment variables จาก .env
+load_dotenv()
 open_api_key = os.getenv("OPENAI_API_KEY")
 client = openai.OpenAI(api_key=open_api_key)
 

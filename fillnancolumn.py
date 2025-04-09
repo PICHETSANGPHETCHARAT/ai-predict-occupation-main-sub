@@ -1,6 +1,9 @@
 import pandas as pd
 import openai
+from dotenv import load_dotenv  # นำเข้า python-dotenv
 
+# โหลด environment variables จาก .env
+load_dotenv()
 # API Key สำหรับ OpenAI
 import os
 open_api_key = os.getenv("OPENAI_API_KEY")

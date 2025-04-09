@@ -9,7 +9,10 @@ import mysql.connector
 import json
 from openai import OpenAI
 import uvicorn
+from dotenv import load_dotenv  # นำเข้า python-dotenv
 
+# โหลด environment variables จาก .env
+load_dotenv()
 # === GPT Client ===
 import os
 open_api_key = os.getenv("OPENAI_API_KEY")
