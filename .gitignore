@@ -6,4 +6,4 @@ results/*
 !results/.gitkeep
 model
 .env
-
+model_thaibert
