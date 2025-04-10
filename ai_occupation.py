@@ -23,7 +23,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 # === Load Model & Label Encoder ===
-MODEL_PATH = "./model_thaibert"  # เปลี่ยนเส้นทางเป็น model_thaibert
+MODEL_PATH = "./model_thaibert_v2"  # เปลี่ยนเส้นทางเป็น model_thaibert
 # โหลด LabelEncoder
 with open(os.path.join(MODEL_PATH, "labels.pkl"), "rb") as f:
     label_encoder = pickle.load(f)
