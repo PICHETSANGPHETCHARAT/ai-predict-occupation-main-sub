@@ -72,9 +72,10 @@ def get_job_post_names_by_occupation_ids(occupation_ids):
                 INNER JOIN jobpost j ON j.id = jd.jobpost_id 
             WHERE 
                 j.is_online = '1'
-                AND j.is_flags = '1'
-                AND j.is_status = '0'
+                AND j.is_flags = '0'
+                AND j.is_status = '1'
                 AND j.occupation_new_id IN ({ids_str})
+                AND j.created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
             LIMIT 500;
         """
         cursor.execute(query)
