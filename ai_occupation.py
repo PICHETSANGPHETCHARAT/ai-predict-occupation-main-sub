@@ -201,10 +201,11 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation):
             {"id": main.occupation_id, "name": main.name} for main in main_occupation
         ]
 
+        # เปลี่ยนให้วนลูปผ่าน main_options แทน main_occupation
         main_list_text = "\n".join(
             [
                 f"{i+1}. {json.dumps(option, ensure_ascii=False)}"
-                for i, option in enumerate(main_occupation)
+                for i, option in enumerate(main_options)
             ]
         )
 
