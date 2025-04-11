@@ -4,7 +4,7 @@
 import pandas as pd
 
 # โหลดไฟล์ CSV จาก local (กรณีรันใน Colab ให้ upload ก่อน)
-file_path = "dataforthaibert2.csv"
+file_path = "/home/pichet/ai-predict-occupation-main-sub/data/job_positions_by_occupation_from_db.csv"
 df = pd.read_csv(file_path)
 
 # แสดงตัวอย่างข้อมูล
@@ -98,13 +98,13 @@ def compute_metrics(p):
 #     no_cuda=True,  # บังคับให้ใช้ CPU เท่านั้น
 # )
 training_args = TrainingArguments(
-    output_dir="./results",
+    output_dir="/home/pichet/ai-predict-occupation-main-sub/results",  # เปลี่ยนที่เก็บผลลัพธ์
     evaluation_strategy="epoch",  # ประเมินผลทุกตอนจบ epoch
     save_strategy="epoch",  # บันทึกโมเดลทุกตอนจบ epoch
     learning_rate=3e-5,  # ปรับ learning rate ขึ้นเล็กน้อย
     per_device_train_batch_size=8,  # เพิ่ม batch size สำหรับ CPU
     per_device_eval_batch_size=8,  # เพิ่ม batch size สำหรับการประเมิน
-    num_train_epochs=10,  # เพิ่มจำนวน epochs
+    num_train_epochs=15,  # เพิ่มจำนวน epochs
     weight_decay=0.01,  # ค่า weight decay
     logging_dir='./logs',
     no_cuda=True,  # บังคับให้ใช้ CPU
@@ -117,13 +117,20 @@ training_args = TrainingArguments(
     dataloader_num_workers=8,  # ใช้ 8 workers ในการโหลดข้อมูล
 )
 
+# trainer = Trainer(
+#     model=model,
+#     args=training_args,
+#     train_dataset=tokenized_dataset['train'],
+#     eval_dataset=tokenized_dataset['test'],
+#     tokenizer=tokenizer,
+#     compute_metrics=compute_metrics,
+# )
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_dataset['train'],
-    eval_dataset=tokenized_dataset['test'],
     tokenizer=tokenizer,
-    compute_metrics=compute_metrics,
+    compute_metrics=compute_metrics,  # Optional if you still want to compute metrics
 )
 
 # เพิ่มการจัดการข้อผิดพลาดเพื่อให้โค้ดไม่หยุดทำงานทันที
@@ -144,14 +151,14 @@ try:
     # ================================
     # STEP 6: บันทึกโมเดลและ LabelEncoder (สำหรับใช้ใน FastAPI)
     # ================================
-    model.save_pretrained("./model_thaibert")
-    tokenizer.save_pretrained("./model_thaibert")
+    model.save_pretrained("/home/pichet/ai-predict-occupation-main-sub/model_thaibert_v2")
+    tokenizer.save_pretrained("/home/pichet/ai-predict-occupation-main-sub/model_thaibert_v2")
 
     import os
     import pickle
 
     # ตรวจสอบว่าโฟลเดอร์ './model' มีอยู่หรือไม่
-    model_dir = "./model_thaibert"
+    model_dir = "/home/pichet/ai-predict-occupation-main-sub/model_thaibert_v2"
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)  # หากไม่มีโฟลเดอร์นี้, สร้างมันขึ้นมา
 
