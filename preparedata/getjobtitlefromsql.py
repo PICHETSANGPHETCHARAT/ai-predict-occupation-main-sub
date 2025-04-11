@@ -130,7 +130,6 @@ def export_job_positions_to_csv():
         occupation_id = occ["occupation_id"]
         occupation_name = occ["name"]
         job_titles = get_job_post_names_by_occupation_id(occupation_id)
-        is_online = occ["is_online"]
         
         processed += 1
         print(f"⏳ กำลังดึงข้อมูล: {processed}/{total_occupations} - {occupation_name} (ID: {occupation_id}) - พบตำแหน่งงาน {len(job_titles)} รายการ")
@@ -140,7 +139,6 @@ def export_job_positions_to_csv():
                 "occupation_id": occupation_id,
                 "สาขาอาชีพหลัก": occupation_name,
                 "ชื่อตำแหน่งงาน": title,
-                "is_online": is_online
             })
 
         time.sleep(0.1)  # เพิ่ม delay เล็กน้อยเพื่อไม่ให้ server ทำงานหนัก
