@@ -101,6 +101,10 @@ def get_job_post_names_by_occupation_id(occupation_id):
                 INNER JOIN jobpost j ON j.id = jd.jobpost_id 
             WHERE 
                 j.occupation_new_id = %s
+                AND j.is_online = '1'
+                AND j.is_flags = '0'
+                AND j.is_status = '1'
+                AND j.created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
             LIMIT 200;
             """,
             (occupation_id,)
