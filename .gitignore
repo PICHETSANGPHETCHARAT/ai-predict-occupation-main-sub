@@ -7,3 +7,4 @@ results/*
 model
 .env
 model_thaibert
+nohup.out
