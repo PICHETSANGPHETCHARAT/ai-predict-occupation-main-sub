@@ -7,7 +7,7 @@ from dotenv import load_dotenv  # นำเข้า python-dotenv
 load_dotenv()
 # ตั้งค่า API Key ของคุณ
 import os
-open_api_key = os.getenv("OPENAI_API_KEY")
+open_api_key = os.getenv("OPENAI_API_KEY_DEV")
 client = OpenAI(api_key=open_api_key)
 
 # โหลดข้อมูลจากไฟล์ CSV

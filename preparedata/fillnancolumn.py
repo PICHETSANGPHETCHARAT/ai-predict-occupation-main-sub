@@ -6,7 +6,7 @@ from dotenv import load_dotenv  # นำเข้า python-dotenv
 load_dotenv()
 # API Key สำหรับ OpenAI
 import os
-open_api_key = os.getenv("OPENAI_API_KEY")
+open_api_key = os.getenv("OPENAI_API_KEY_DEV")
 client = OpenAI(api_key=open_api_key)
 
 # Function to generate job titles using ChatGPT API
