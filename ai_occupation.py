@@ -407,6 +407,7 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
         else:
             return {
                 "job_title": job_title,
+                "occupation_id": main_id,
                 "main_occupation": main_name,
                 "sub_occupation_id": sub_id,
                 "sub_occupation_name": sub_name,
