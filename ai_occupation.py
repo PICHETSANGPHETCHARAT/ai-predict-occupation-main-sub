@@ -19,7 +19,12 @@ open_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=open_api_key)
 
 # === FastAPI Setup ===
-app = FastAPI()
+app = FastAPI(
+    title="JobBKK AI occupation API",
+    description="API for predict occupation main and sub using AI",
+    version="1.0.0",
+    root_path="/ai_predictoccupationmainsub",
+)
 templates = Jinja2Templates(directory="templates")
 
 # === Load Model & Label Encoder ===
@@ -31,6 +36,10 @@ with open(os.path.join(MODEL_PATH, "labels.pkl"), "rb") as f:
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=False)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 model.eval()
+
+
+class PredictRequest(BaseModel):
+    job_title: str
 
 
 # ✅ DB Model
@@ -45,6 +54,7 @@ class OccupationSub:
             occupation_sub_id=db_record["occupation_sub_id"], name=db_record["name"]
         )
 
+
 class OccupationMain:
     def __init__(self, occupation_id, name):
         self.occupation_id = occupation_id
@@ -52,9 +62,8 @@ class OccupationMain:
 
     @classmethod
     def from_db(cls, db_record):
-        return cls(
-            occupation_id=db_record["occupation_id"], name=db_record["name"]
-        )
+        return cls(occupation_id=db_record["occupation_id"], name=db_record["name"])
+
 
 # ✅ Database Connection
 def get_db_connection_120other():
@@ -262,12 +271,12 @@ async def form_post(request: Request, job_title: str = Form(...)):
 
 
 # ✅ API JSON (POST สำหรับ JavaScript fetch) สำหรับเวอร์ชั่นใหม่
-@app.post("/api/predict")
-async def predict_api(data: dict = Body(...)):
-    job_title = data.get("job_title")
+@app.post("/ai/predictoccupationmainsub")
+async def predict_api(data: PredictRequest):
+    job_title = data.job_title
     if not job_title:
         return JSONResponse(content={"error": "กรุณากรอกชื่อตำแหน่งงาน"}, status_code=400)
-    
+
     try:
         # เรียกใช้ handle_prediction2 ซึ่งเป็นเวอร์ชั่นใหม่
         result = await handle_prediction2(None, job_title, render_html=False)
@@ -277,7 +286,7 @@ async def predict_api(data: dict = Body(...)):
     except Exception as e:
         # เมื่อเกิดข้อผิดพลาด fallback ไปใช้ handle_prediction เวอร์ชั่นเดิม
         result = await handle_prediction(None, job_title, render_html=False)
-    
+
     return result
 
 
@@ -286,7 +295,9 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
     conn = None
     cursor = None
     try:
-        inputs = tokenizer(job_title, return_tensors="pt", truncation=True, padding=True, max_length=64)
+        inputs = tokenizer(
+            job_title, return_tensors="pt", truncation=True, padding=True, max_length=64
+        )
         with torch.no_grad():
             outputs = model(**inputs)
             predicted_class_id = torch.argmax(outputs.logits, dim=1).item()
@@ -312,7 +323,9 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
         if not row:
             msg = f"ไม่พบรหัส occupation_id สำหรับ '{main_occupation}'"
             if render_html:
-                return templates.TemplateResponse("index.html", {"request": request, "error": msg})
+                return templates.TemplateResponse(
+                    "index.html", {"request": request, "error": msg}
+                )
             return JSONResponse(content={"error": msg}, status_code=404)
 
         occupation_id = row["occupation_id"]
@@ -321,7 +334,9 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
         conn.close()
 
         sub_occupations = await get_occupation_subs(occupation_id)
-        sub_id, sub_name = await predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupations)
+        sub_id, sub_name = await predict_sub_occupation_with_gpt(
+            job_title, main_occupation, sub_occupations
+        )
 
         if render_html:
             return templates.TemplateResponse(
@@ -345,8 +360,12 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
 
     except Exception as e:
         if render_html:
-            return templates.TemplateResponse("index.html", {"request": request, "error": f"เกิดข้อผิดพลาด: {str(e)}"})
-        return JSONResponse(content={"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status_code=500)
+            return templates.TemplateResponse(
+                "index.html", {"request": request, "error": f"เกิดข้อผิดพลาด: {str(e)}"}
+            )
+        return JSONResponse(
+            content={"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status_code=500
+        )
     finally:
         if cursor:
             try:
@@ -365,9 +384,13 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
     try:
         list_main_occupations = await get_occupation_main()
         # เรียกใช้ GPT-based main occupation prediction ด้วย await
-        main_id, main_name = await predict_main_occupation_with_gpt(job_title, list_main_occupations)
+        main_id, main_name = await predict_main_occupation_with_gpt(
+            job_title, list_main_occupations
+        )
         sub_occupations = await get_occupation_subs(main_id)
-        sub_id, sub_name = await predict_sub_occupation_with_gpt(job_title, main_name, sub_occupations)
+        sub_id, sub_name = await predict_sub_occupation_with_gpt(
+            job_title, main_name, sub_occupations
+        )
 
         if render_html:
             return templates.TemplateResponse(
@@ -391,8 +414,12 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
 
     except Exception as e:
         if render_html:
-            return templates.TemplateResponse("index.html", {"request": request, "error": f"เกิดข้อผิดพลาด: {str(e)}"})
-        return JSONResponse(content={"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status_code=500)
+            return templates.TemplateResponse(
+                "index.html", {"request": request, "error": f"เกิดข้อผิดพลาด: {str(e)}"}
+            )
+        return JSONResponse(
+            content={"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status_code=500
+        )
 
 
 # ✅ Run Server

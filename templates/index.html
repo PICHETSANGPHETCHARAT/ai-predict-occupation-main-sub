@@ -290,7 +290,7 @@
         const jobTitle = document.getElementById('job_title').value;
         
         try {
-          const response = await fetch('/api/predict', {
+          const response = await fetch('/ai/predictoccupationmainsub', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
