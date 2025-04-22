@@ -19,6 +19,7 @@ from openai import OpenAI
 import uvicorn
 from dotenv import load_dotenv
 import os
+import re
 
 # โหลด environment variables จาก .env
 load_dotenv()
@@ -742,6 +743,10 @@ async def predict_employer_api(data: PredictRequestEmployer):
         return JSONResponse(content={"error": "กรุณากรอกชื่อตำแหน่งงาน"}, status_code=400)
     if not bussiness_type:
         return JSONResponse(content={"error": "กรุณากรอกประเภทธุรกิจ"}, status_code=400)
+
+    # ลบช่องว่างที่ต้นและท้ายข้อความ และลบสัญลักษณ์พิเศษจาก bussiness_type
+    bussiness_type = bussiness_type.strip()  # ลบช่องว่างที่ต้นและท้าย
+    bussiness_type = re.sub(r'[^\w\sก-๙]', '', bussiness_type)  # ลบสัญลักษณ์พิเศษ
 
     try:
         # พยายามใช้ GPT พร้อมข้อมูลประเภทธุรกิจ
