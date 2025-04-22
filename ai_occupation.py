@@ -425,4 +425,4 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
 
 # ✅ Run Server
 if __name__ == "__main__":
-    uvicorn.run("ai_occupation:app", host="10.100.100.208", port=8004, reload=True)
+    uvicorn.run("ai_occupation:app", host="0.0.0.0", port=8004, reload=True)
