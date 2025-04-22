@@ -23,7 +23,7 @@ app = FastAPI(
     title="JobBKK AI occupation API",
     description="API for predict occupation main and sub using AI",
     version="1.0.0",
-    root_path="/ai_predictoccupationmainsub",
+    root_path="/ai_predict_occupation",
 )
 templates = Jinja2Templates(directory="templates")
 
@@ -271,7 +271,7 @@ async def form_post(request: Request, job_title: str = Form(...)):
 
 
 # ✅ API JSON (POST สำหรับ JavaScript fetch) สำหรับเวอร์ชั่นใหม่
-@app.post("/ai/predictoccupationmainsub")
+@app.post("/predict/member")
 async def predict_api(data: PredictRequest):
     job_title = data.job_title
     if not job_title:
@@ -425,4 +425,4 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
 
 # ✅ Run Server
 if __name__ == "__main__":
-    uvicorn.run("ai_occupation:app", host="10.100.100.208", port=8010, reload=True)
+    uvicorn.run("ai_occupation:app", host="10.100.100.208", port=8003, reload=True)
