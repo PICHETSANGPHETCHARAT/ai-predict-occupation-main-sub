@@ -1,4 +1,12 @@
-from fastapi import FastAPI, Request, Form, Body
+"""
+JobBKK AI Occupation Prediction API
+------------------------------
+API สำหรับทำนายตำแหน่งงานหลักและตำแหน่งงานย่อยด้วย AI
+รองรับทั้งการใช้งานผ่าน AI model (ThaiBERT) และ GPT
+"""
+
+# === 1. การ import และตั้งค่าเริ่มต้น ===
+from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -9,12 +17,13 @@ import mysql.connector
 import json
 from openai import OpenAI
 import uvicorn
-from dotenv import load_dotenv  # นำเข้า python-dotenv
+from dotenv import load_dotenv
 import os
 
 # โหลด environment variables จาก .env
 load_dotenv()
-# === GPT Client ===
+
+# === OpenAI GPT Client Setup ===
 open_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=open_api_key)
 
@@ -27,9 +36,8 @@ app = FastAPI(
 )
 templates = Jinja2Templates(directory="templates")
 
-# === Load Model & Label Encoder ===
-MODEL_PATH = "./model/model_thaibert_v2"  # เปลี่ยนเส้นทางเป็น model_thaibert
-# โหลด LabelEncoder
+# === Load ML Model & Label Encoder ===
+MODEL_PATH = "./model/model_thaibert_v2"
 with open(os.path.join(MODEL_PATH, "labels.pkl"), "rb") as f:
     label_encoder = pickle.load(f)
 
@@ -37,13 +45,33 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=False)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 model.eval()
 
+# === 2. Models ===
 
-class PredictRequest(BaseModel):
+
+# --- Pydantic Models for API Requests ---
+class PredictRequestMember(BaseModel):
+    """
+    สำหรับรับข้อมูลการทำนายตำแหน่งงานของผู้หางาน
+    """
+
     job_title: str
 
 
-# ✅ DB Model
+class PredictRequestEmployer(BaseModel):
+    """
+    สำหรับรับข้อมูลการทำนายตำแหน่งงานของนายจ้าง รวมถึงประเภทธุรกิจ
+    """
+
+    job_title: str
+    bussiness_type: str
+
+
+# --- Database Models ---
 class OccupationSub:
+    """
+    โมเดลสำหรับเก็บข้อมูลตำแหน่งงานย่อย
+    """
+
     def __init__(self, occupation_sub_id, name):
         self.occupation_sub_id = occupation_sub_id
         self.name = name
@@ -56,6 +84,10 @@ class OccupationSub:
 
 
 class OccupationMain:
+    """
+    โมเดลสำหรับเก็บข้อมูลตำแหน่งงานหลัก
+    """
+
     def __init__(self, occupation_id, name):
         self.occupation_id = occupation_id
         self.name = name
@@ -65,18 +97,32 @@ class OccupationMain:
         return cls(occupation_id=db_record["occupation_id"], name=db_record["name"])
 
 
-# ✅ Database Connection
+# === 3. Database Connection ===
 def get_db_connection_120other():
+    """
+    สร้างการเชื่อมต่อกับฐานข้อมูล jobbkk_other
+
+    Returns:
+        mysql.connector.connection: การเชื่อมต่อกับฐานข้อมูล
+    """
     return mysql.connector.connect(
-        host="192.168.100.120",
-        user="jobbkk_other",
-        password="orerthjobk2022$",
-        database="jobbkk_other",
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
     )
 
 
-# ✅ Get Sub Occupations
 async def get_occupation_subs(occupation_id: int):
+    """
+    ดึงข้อมูลตำแหน่งงานย่อยตาม occupation_id
+
+    Args:
+        occupation_id: รหัสตำแหน่งงานหลัก
+
+    Returns:
+        list: รายการตำแหน่งงานย่อย
+    """
     conn = None
     cursor = None
     try:
@@ -112,8 +158,13 @@ async def get_occupation_subs(occupation_id: int):
             conn.close()
 
 
-# ✅ Get Occupations Main
 async def get_occupation_main():
+    """
+    ดึงข้อมูลตำแหน่งงานหลักทั้งหมด
+
+    Returns:
+        list: รายการตำแหน่งงานหลัก
+    """
     conn = None
     cursor = None
     try:
@@ -147,8 +198,179 @@ async def get_occupation_main():
             conn.close()
 
 
-# ✅ GPT-based Sub Occupation Prediction
+# === 4. Prediction Functions ===
+
+
+# --- ThaiBERT Prediction ---
+async def predict_with_thaibert(job_title: str):
+    """
+    ทำนายตำแหน่งงานหลักโดยใช้โมเดล ThaiBERT
+
+    Args:
+        job_title: ชื่อตำแหน่งงาน
+
+    Returns:
+        str: ชื่อตำแหน่งงานหลักที่ทำนาย
+    """
+    inputs = tokenizer(
+        job_title, return_tensors="pt", truncation=True, padding=True, max_length=64
+    )
+    with torch.no_grad():
+        outputs = model(**inputs)
+        predicted_class_id = torch.argmax(outputs.logits, dim=1).item()
+        main_occupation = label_encoder.inverse_transform([predicted_class_id])[0]
+    return main_occupation
+
+
+# --- GPT Prediction Functions ---
+async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
+    """
+    ทำนายตำแหน่งงานหลักโดยใช้ GPT
+
+    Args:
+        job_title: ชื่อตำแหน่งงาน
+        main_occupation_list: รายการตำแหน่งงานหลักทั้งหมด
+
+    Returns:
+        tuple: (occupation_id, occupation_name) หรือ (None, error_message)
+    """
+    try:
+        main_options = [
+            {"id": main.occupation_id, "name": main.name}
+            for main in main_occupation_list
+        ]
+
+        main_list_text = "\n".join(
+            [
+                f"{i+1}. {json.dumps(option, ensure_ascii=False)}"
+                for i, option in enumerate(main_options)
+            ]
+        )
+
+        prompt = f"""
+        ชื่อตำแหน่งงาน: "{job_title}"
+        จากชื่อตำแหน่งงาน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว โดยพิจารณาจาก ID และชื่อ:
+
+        {main_list_text}
+
+        กรุณาตอบกลับเพียง 1 บรรทัด โดยให้เป็น JSON ของรายการที่คุณเลือก เช่น:
+        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
+        """
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0,
+            messages=[
+                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        content = completion.choices[0].message.content.strip()
+
+        if not content.startswith("{"):
+            return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
+
+        response_data = json.loads(content)
+        main_id = response_data.get("id") or response_data.get("occupation_id")
+
+        if not main_id:
+            return None, f"ไม่พบ id จาก GPT: {response_data}"
+
+        for main in main_occupation_list:
+            if main.occupation_id == main_id:
+                return main.occupation_id, main.name
+
+        return None, "ไม่พบสาขาหลักที่ตรง"
+
+    except Exception as e:
+        return None, f"GPT ERROR: {e}"
+
+
+async def predict_main_occupation_with_gpt_with_business(
+    job_title, main_occupation_list, bussiness_type
+):
+    """
+    ทำนายตำแหน่งงานหลักโดยใช้ GPT พร้อมข้อมูลประเภทธุรกิจ
+
+    Args:
+        job_title: ชื่อตำแหน่งงาน
+        main_occupation_list: รายการตำแหน่งงานหลักทั้งหมด
+        bussiness_type: ประเภทธุรกิจ
+
+    Returns:
+        tuple: (occupation_id, occupation_name) หรือ (None, error_message)
+    """
+    try:
+        main_options = [
+            {"id": main.occupation_id, "name": main.name}
+            for main in main_occupation_list
+        ]
+
+        main_list_text = "\n".join(
+            [
+                f"{i+1}. {json.dumps(option, ensure_ascii=False)}"
+                for i, option in enumerate(main_options)
+            ]
+        )
+
+        prompt = f"""
+        ชื่อตำแหน่งงาน: "{job_title}"
+        ประเภทธุรกิจ: "{bussiness_type}"
+        
+        จากชื่อตำแหน่งงานและประเภทธุรกิจข้างต้น โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุด โดยพิจารณาจาก ID และชื่อ:
+
+        {main_list_text}
+
+        กรุณาตอบกลับเพียง 1 บรรทัด โดยให้เป็น JSON ของรายการที่คุณเลือก เช่น:
+        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
+        """
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานและธุรกิจ",
+                },
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        content = completion.choices[0].message.content.strip()
+
+        if not content.startswith("{"):
+            return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
+
+        response_data = json.loads(content)
+        main_id = response_data.get("id") or response_data.get("occupation_id")
+
+        if not main_id:
+            return None, f"ไม่พบ id จาก GPT: {response_data}"
+
+        for main in main_occupation_list:
+            if main.occupation_id == main_id:
+                return main.occupation_id, main.name
+
+        return None, "ไม่พบสาขาหลักที่ตรง"
+
+    except Exception as e:
+        return None, f"GPT ERROR: {e}"
+
+
 async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupations):
+    """
+    ทำนายตำแหน่งงานย่อยโดยใช้ GPT
+
+    Args:
+        job_title: ชื่อตำแหน่งงาน
+        main_occupation: ชื่อตำแหน่งงานหลัก
+        sub_occupations: รายการตำแหน่งงานย่อย
+
+    Returns:
+        tuple: (occupation_sub_id, occupation_sub_name) หรือ (None, error_message)
+    """
     try:
         sub_options = [
             {"id": sub.occupation_sub_id, "name": sub.name} for sub in sub_occupations
@@ -203,36 +425,54 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         return None, f"GPT ERROR: {e}"
 
 
-# ✅ GPT-based Main Occupation Prediction
-async def predict_main_occupation_with_gpt(job_title, main_occupation):
+async def predict_sub_occupation_with_gpt_with_business(
+    job_title, main_occupation, sub_occupations, bussiness_type
+):
+    """
+    ทำนายตำแหน่งงานย่อยโดยใช้ GPT พร้อมข้อมูลประเภทธุรกิจ
+
+    Args:
+        job_title: ชื่อตำแหน่งงาน
+        main_occupation: ชื่อตำแหน่งงานหลัก
+        sub_occupations: รายการตำแหน่งงานย่อย
+        bussiness_type: ประเภทธุรกิจ
+
+    Returns:
+        tuple: (occupation_sub_id, occupation_sub_name) หรือ (None, error_message)
+    """
     try:
-        main_options = [
-            {"id": main.occupation_id, "name": main.name} for main in main_occupation
+        sub_options = [
+            {"id": sub.occupation_sub_id, "name": sub.name} for sub in sub_occupations
         ]
 
-        # เปลี่ยนให้วนลูปผ่าน main_options แทน main_occupation
-        main_list_text = "\n".join(
+        sub_list_text = "\n".join(
             [
                 f"{i+1}. {json.dumps(option, ensure_ascii=False)}"
-                for i, option in enumerate(main_options)
+                for i, option in enumerate(sub_options)
             ]
         )
 
         prompt = f"""
         ชื่อตำแหน่งงาน: "{job_title}"
-        จากชื่อตำแหน่งงาน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว โดยพิจารณาจาก ID และชื่อ:
+        ประเภทธุรกิจ: "{bussiness_type}"
+        สาขาอาชีพหลัก: "{main_occupation}"
 
-        {main_list_text}
+        จากรายการสาขาอาชีพรองด้านล่างนี้ โปรดเลือกเพียง 1 รายการที่เหมาะสมที่สุดสำหรับตำแหน่งงานและประเภทธุรกิจดังกล่าว โดยพิจารณาจาก ID และชื่อ:
+
+        {sub_list_text}
 
         กรุณาตอบกลับเพียง 1 บรรทัด โดยให้เป็น JSON ของรายการที่คุณเลือก เช่น:
-        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
+        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานรอง"}}
         """
 
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
             messages=[
-                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
+                {
+                    "role": "system",
+                    "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานและธุรกิจ",
+                },
                 {"role": "user", "content": prompt},
             ],
         )
@@ -243,66 +483,43 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation):
             return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
 
         response_data = json.loads(content)
-        main_id = response_data.get("id") or response_data.get("occupation_id")
+        sub_id = response_data.get("id") or response_data.get("occupation_sub_id")
 
-        if not main_id:
+        if not sub_id:
             return None, f"ไม่พบ id จาก GPT: {response_data}"
 
-        for main in main_occupation:
-            if main.occupation_id == main_id:
-                return main.occupation_id, main.name
+        for sub in sub_occupations:
+            if sub.occupation_sub_id == sub_id:
+                return sub.occupation_sub_id, sub.name
 
-        return None, "ไม่พบสาขาหลักที่ตรง"
+        return None, "ไม่พบสาขารองที่ตรง"
 
     except Exception as e:
         return None, f"GPT ERROR: {e}"
 
 
-# ✅ HTML Form (GET)
-@app.get("/", response_class=HTMLResponse)
-def form_get(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+# --- Main prediction handlers ---
+async def handle_prediction_thaibert(
+    request: Request, job_title: str, render_html: bool
+):
+    """
+    จัดการกระบวนการทำนายโดยใช้ ThaiBERT
 
+    Args:
+        request: FastAPI Request
+        job_title: ชื่อตำแหน่งงาน
+        render_html: True หากต้องการ render HTML, False หากต้องการ JSON
 
-# ✅ HTML Form (POST แบบ reload หน้า) สำหรับเวอร์ชั่นเดิมที่ใช้ ThaiBERT ทำนายตำแหน่งงานหลัก
-@app.post("/", response_class=HTMLResponse)
-async def form_post(request: Request, job_title: str = Form(...)):
-    return await handle_prediction(request, job_title, render_html=True)
-
-
-# ✅ API JSON (POST สำหรับ JavaScript fetch) สำหรับเวอร์ชั่นใหม่
-@app.post("/predict/member")
-async def predict_api(data: PredictRequest):
-    job_title = data.job_title
-    if not job_title:
-        return JSONResponse(content={"error": "กรุณากรอกชื่อตำแหน่งงาน"}, status_code=400)
-
-    try:
-        # เรียกใช้ handle_prediction2 ซึ่งเป็นเวอร์ชั่นใหม่
-        result = await handle_prediction2(None, job_title, render_html=False)
-        # หากผลลัพธ์ส่งกลับไปมี error key (กรณี handle_prediction2 จับ Exception แล้วส่งกลับเป็น dict error)
-        if result.get("error"):
-            raise Exception(result.get("error"))
-    except Exception as e:
-        # เมื่อเกิดข้อผิดพลาด fallback ไปใช้ handle_prediction เวอร์ชั่นเดิม
-        result = await handle_prediction(None, job_title, render_html=False)
-
-    return result
-
-
-# ✅ Core Prediction Logic เวอร์ชั่นเดิม
-async def handle_prediction(request: Request, job_title: str, render_html: bool):
+    Returns:
+        HTML/JSON response
+    """
     conn = None
     cursor = None
     try:
-        inputs = tokenizer(
-            job_title, return_tensors="pt", truncation=True, padding=True, max_length=64
-        )
-        with torch.no_grad():
-            outputs = model(**inputs)
-            predicted_class_id = torch.argmax(outputs.logits, dim=1).item()
-            main_occupation = label_encoder.inverse_transform([predicted_class_id])[0]
+        # ทำนายตำแหน่งงานหลักด้วย ThaiBERT
+        main_occupation = await predict_with_thaibert(job_title)
 
+        # ค้นหา occupation_id จากชื่อที่ทำนายได้
         conn = get_db_connection_120other()
         cursor = conn.cursor(dictionary=True)
         cursor.execute(
@@ -333,11 +550,13 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
         cursor.close()
         conn.close()
 
+        # ทำนายตำแหน่งงานย่อยด้วย GPT
         sub_occupations = await get_occupation_subs(occupation_id)
         sub_id, sub_name = await predict_sub_occupation_with_gpt(
             job_title, main_occupation, sub_occupations
         )
 
+        # สร้างการตอบกลับตามรูปแบบที่ต้องการ
         if render_html:
             return templates.TemplateResponse(
                 "index.html",
@@ -354,6 +573,7 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
             return {
                 "job_title": job_title,
                 "main_occupation": main_occupation,
+                "occupation_id": occupation_id,
                 "sub_occupation_id": sub_id,
                 "sub_occupation_name": sub_name,
             }
@@ -379,19 +599,48 @@ async def handle_prediction(request: Request, job_title: str, render_html: bool)
                 pass
 
 
-# ✅ Core Prediction Logic เวอร์ชั่นใหม่ (ใช้ ChatGPT API ในการเลือกทั้งสาขาหลักและรอง)
-async def handle_prediction2(request: Request, job_title: str, render_html: bool):
-    try:
-        list_main_occupations = await get_occupation_main()
-        # เรียกใช้ GPT-based main occupation prediction ด้วย await
-        main_id, main_name = await predict_main_occupation_with_gpt(
-            job_title, list_main_occupations
-        )
-        sub_occupations = await get_occupation_subs(main_id)
-        sub_id, sub_name = await predict_sub_occupation_with_gpt(
-            job_title, main_name, sub_occupations
-        )
+async def handle_prediction_gpt(
+    request: Request, job_title: str, render_html: bool, bussiness_type: str = None
+):
+    """
+    จัดการกระบวนการทำนายโดยใช้ GPT
 
+    Args:
+        request: FastAPI Request
+        job_title: ชื่อตำแหน่งงาน
+        render_html: True หากต้องการ render HTML, False หากต้องการ JSON
+        bussiness_type: ประเภทธุรกิจ (optional)
+
+    Returns:
+        HTML/JSON response
+    """
+    try:
+        # ดึงข้อมูลตำแหน่งงานหลักทั้งหมด
+        list_main_occupations = await get_occupation_main()
+
+        # ทำนายตำแหน่งงานหลัก
+        if bussiness_type:
+            main_id, main_name = await predict_main_occupation_with_gpt_with_business(
+                job_title, list_main_occupations, bussiness_type
+            )
+        else:
+            main_id, main_name = await predict_main_occupation_with_gpt(
+                job_title, list_main_occupations
+            )
+
+        # ทำนายตำแหน่งงานย่อย
+        sub_occupations = await get_occupation_subs(main_id)
+
+        if bussiness_type:
+            sub_id, sub_name = await predict_sub_occupation_with_gpt_with_business(
+                job_title, main_name, sub_occupations, bussiness_type
+            )
+        else:
+            sub_id, sub_name = await predict_sub_occupation_with_gpt(
+                job_title, main_name, sub_occupations
+            )
+
+        # สร้างการตอบกลับตามรูปแบบที่ต้องการ
         if render_html:
             return templates.TemplateResponse(
                 "index.html",
@@ -402,16 +651,20 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
                     "main_occupation": main_name,
                     "sub_occupation_id": sub_id,
                     "sub_occupation_name": sub_name,
+                    "bussiness_type": bussiness_type,
                 },
             )
         else:
-            return {
+            result = {
                 "job_title": job_title,
                 "occupation_id": main_id,
                 "main_occupation": main_name,
                 "sub_occupation_id": sub_id,
                 "sub_occupation_name": sub_name,
             }
+            if bussiness_type:
+                result["bussiness_type"] = bussiness_type
+            return result
 
     except Exception as e:
         if render_html:
@@ -423,6 +676,90 @@ async def handle_prediction2(request: Request, job_title: str, render_html: bool
         )
 
 
-# ✅ Run Server
+# === 5. API Endpoints ===
+
+
+@app.get("/", response_class=HTMLResponse)
+def form_get(request: Request):
+    """
+    หน้าแบบฟอร์มสำหรับการทำนายด้วย UI
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.post("/", response_class=HTMLResponse)
+async def form_post(request: Request, job_title: str = Form(...)):
+    """
+    API สำหรับรับข้อมูลจากฟอร์มและส่งกลับผลการทำนายในรูปแบบ HTML
+    """
+    return await handle_prediction_thaibert(request, job_title, render_html=True)
+
+
+@app.post("/predict/member")
+async def predict_member_api(data: PredictRequestMember):
+    """
+    API สำหรับผู้หางาน ทำนายตำแหน่งงานจากชื่อตำแหน่ง
+
+    Args:
+        data: ข้อมูลคำขอที่มีชื่อตำแหน่งงาน
+
+    Returns:
+        JSONResponse: ผลการทำนาย
+    """
+    job_title = data.job_title
+    if not job_title:
+        return JSONResponse(content={"error": "กรุณากรอกชื่อตำแหน่งงาน"}, status_code=400)
+
+    try:
+        # พยายามใช้ GPT ก่อน
+        result = await handle_prediction_gpt(None, job_title, render_html=False)
+        if result.get("error"):
+            raise Exception(result.get("error"))
+        return result
+    except Exception as e:
+        # ถ้า GPT มีปัญหา ให้ใช้ ThaiBERT แทน
+        print(f"GPT prediction failed: {str(e)}, falling back to ThaiBERT")
+        result = await handle_prediction_thaibert(None, job_title, render_html=False)
+        return result
+
+
+@app.post("/predict/employer")
+async def predict_employer_api(data: PredictRequestEmployer):
+    """
+    API สำหรับนายจ้าง ทำนายตำแหน่งงานจากชื่อตำแหน่งและประเภทธุรกิจ
+
+    Args:
+        data: ข้อมูลคำขอที่มีชื่อตำแหน่งงานและประเภทธุรกิจ
+
+    Returns:
+        JSONResponse: ผลการทำนาย
+    """
+    job_title = data.job_title
+    bussiness_type = data.bussiness_type
+
+    # ตรวจสอบข้อมูลนำเข้า
+    if not job_title:
+        return JSONResponse(content={"error": "กรุณากรอกชื่อตำแหน่งงาน"}, status_code=400)
+    if not bussiness_type:
+        return JSONResponse(content={"error": "กรุณากรอกประเภทธุรกิจ"}, status_code=400)
+
+    try:
+        # พยายามใช้ GPT พร้อมข้อมูลประเภทธุรกิจ
+        result = await handle_prediction_gpt(
+            None, job_title, render_html=False, bussiness_type=bussiness_type
+        )
+        if result.get("error"):
+            raise Exception(result.get("error"))
+        return result
+    except Exception as e:
+        # ถ้า GPT มีปัญหา ให้ใช้ ThaiBERT แทน (ไม่ใช้ข้อมูลประเภทธุรกิจ)
+        print(
+            f"GPT prediction with business type failed: {str(e)}, falling back to ThaiBERT"
+        )
+        result = await handle_prediction_thaibert(None, job_title, render_html=False)
+        return result
+
+
+# === 6. Main Function ===
 if __name__ == "__main__":
     uvicorn.run("ai_occupation:app", host="0.0.0.0", port=8004, reload=True)
