@@ -65,10 +65,11 @@
     <div class="text-center mb-10">
       <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-3">ค้นหาตำแหน่งงานที่เหมาะสมด้วย AI</h1>
       <p class="text-gray-600 max-w-2xl mx-auto">
-        ระบบอัจฉริยะที่ช่วยวิเคราะห์และทำนายหมวดหมู่ตำแหน่งงานที่เหมาะสมกับคุณด้วยเทคโนโลยี AI ล่าสุด</p>
+        ระบบอัจฉริยะที่ช่วยวิเคราะห์และทำนายหมวดหมู่ตำแหน่งงานที่เหมาะสมกับคุณด้วยเทคโนโลยี AI ล่าสุด
+      </p>
     </div>
 
-    <!-- Search Form -->
+    <!-- Job Seeker Form -->
     <div class="max-w-2xl mx-auto">
       <div class="bg-white rounded-lg shadow-lg p-8 mb-10">
         <h2 class="text-2xl font-semibold mb-6 text-gray-800 flex items-center">
@@ -94,89 +95,91 @@
           <p class="text-xs text-gray-500 mt-2">ตัวอย่าง: ผู้จัดการฝ่ายการตลาด, นักพัฒนาซอฟต์แวร์, พนักงานขาย</p>
         </form>
       </div>
+    </div>
 
-      <!-- Results Section -->
-      <div id="resultsSection" class="hidden bg-white rounded-lg shadow-lg p-8 transform transition duration-500 hover:shadow-xl">
-        <div class="flex justify-between items-start">
-          <h3 class="text-xl font-semibold text-gray-800 mb-6">ผลการวิเคราะห์</h3>
-          <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">AI Powered</span>
-        </div>
-
-        <div class="space-y-6">
-          <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
-            <p class="text-gray-500 mb-1 text-sm">ตำแหน่งที่ค้นหา</p>
-            <p id="resultJobTitle" class="text-gray-800 font-medium"></p>
+    <!-- Employer Prediction Form -->
+    <div class="max-w-2xl mx-auto mt-8">
+      <div class="bg-white rounded-lg shadow-lg p-8 mb-10">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-800 flex items-center">
+          <i class="fas fa-briefcase mr-3 text-blue-600"></i>
+          ทำนายหมวดหมู่ตำแหน่งงานสำหรับนายจ้าง
+        </h2>
+        <form id="employerForm" class="space-y-4">
+          <div class="relative">
+            <input type="text" id="employer_job_title" name="job_title" 
+              placeholder="กรอกชื่อตำแหน่งงานที่นายจ้างต้องการวิเคราะห์..."
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              required>
           </div>
-
-          <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-            <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-600 flex-1">
-              <div class="flex items-center mb-2">
-                <i class="fas fa-briefcase text-blue-600 mr-2"></i>
-                <p class="text-gray-500 text-sm">หมวดหมู่หลัก</p>
-              </div>
-              <p id="resultMainOccupation" class="text-gray-800 font-medium"></p>
-            </div>
-
-            <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-600 flex-1">
-              <div class="flex items-center mb-2">
-                <i class="fas fa-sitemap text-green-600 mr-2"></i>
-                <p class="text-gray-500 text-sm">ตำแหน่งงานรองที่แนะนำ</p>
-              </div>
-              <p id="resultSubOccupationName" class="text-gray-800 font-medium"></p>
-              <p id="resultSubOccupationId" class="text-xs text-gray-500 mt-1"></p>
-            </div>
+          <div class="relative">
+            <input type="text" id="employer_bussiness_type" name="bussiness_type"
+              placeholder="กรอกประเภทธุรกิจ..."
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              required>
           </div>
+          <button type="submit" id="submitEmployerBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center">
+            <i class="fas fa-robot mr-2"></i>
+            ทำนาย
+          </button>
+        </form>
+      </div>
+    </div>
 
-          <div class="bg-yellow-50 p-4 rounded-lg">
-            <div class="flex items-start">
-              <i class="fas fa-lightbulb text-yellow-500 mr-2 mt-1"></i>
-              <div>
-                <p class="text-gray-700 text-sm">
-                  คำแนะนำเพิ่มเติม: ตำแหน่งงานนี้ต้องการทักษะด้านการสื่อสาร การวิเคราะห์ข้อมูล และการทำงานเป็นทีม
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden bg-white rounded-lg shadow-lg p-8">
+      <div class="flex justify-between items-start">
+        <h3 class="text-xl font-semibold text-gray-800 mb-6">ผลการวิเคราะห์</h3>
+        <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">AI Powered</span>
       </div>
 
-      <!-- Error Message -->
-      <div id="errorSection" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <i class="fas fa-exclamation-circle text-red-500"></i>
+      <div class="space-y-6">
+        <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+          <p class="text-gray-500 mb-1 text-sm">ตำแหน่งที่ค้นหา</p>
+          <p id="resultJobTitle" class="text-gray-800 font-medium"></p>
+        </div>
+
+        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+          <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-600 flex-1">
+            <div class="flex items-center mb-2">
+              <i class="fas fa-briefcase text-blue-600 mr-2"></i>
+              <p class="text-gray-500 text-sm">หมวดหมู่หลัก</p>
+            </div>
+            <p id="resultMainOccupation" class="text-gray-800 font-medium"></p>
           </div>
-          <div class="ml-3">
-            <p id="errorMessage" class="text-sm text-red-700"></p>
+
+          <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-600 flex-1">
+            <div class="flex items-center mb-2">
+              <i class="fas fa-sitemap text-green-600 mr-2"></i>
+              <p class="text-gray-500 text-sm">ตำแหน่งงานรองที่แนะนำ</p>
+            </div>
+            <p id="resultSubOccupationName" class="text-gray-800 font-medium"></p>
+            <p id="resultSubOccupationId" class="text-xs text-gray-500 mt-1"></p>
+          </div>
+        </div>
+
+        <div class="bg-yellow-50 p-4 rounded-lg">
+          <div class="flex items-start">
+            <i class="fas fa-lightbulb text-yellow-500 mr-2 mt-1"></i>
+            <div>
+              <p class="text-gray-700 text-sm">
+                คำแนะนำเพิ่มเติม: ตำแหน่งงานนี้ต้องการทักษะด้านการสื่อสาร การวิเคราะห์ข้อมูล และการทำงานเป็นทีม
+              </p>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Features -->
-    <div class="mt-16 grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
-        <div class="text-blue-600 mb-4 text-3xl">
-          <i class="fas fa-robot"></i>
+    <!-- Error Message -->
+    <div id="errorSection" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i class="fas fa-exclamation-circle text-red-500"></i>
         </div>
-        <h3 class="font-semibold text-lg mb-2">เทคโนโลยี AI</h3>
-        <p class="text-gray-600 text-sm">ใช้โมเดล AI ล่าสุดและ GPT
-          เพื่อวิเคราะห์และทำนายตำแหน่งงานที่เหมาะสมที่สุดสำหรับคุณ</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
-        <div class="text-blue-600 mb-4 text-3xl">
-          <i class="fas fa-database"></i>
+        <div class="ml-3">
+          <p id="errorMessage" class="text-sm text-red-700"></p>
         </div>
-        <h3 class="font-semibold text-lg mb-2">ฐานข้อมูลขนาดใหญ่</h3>
-        <p class="text-gray-600 text-sm">มีฐานข้อมูลตำแหน่งงานและหมวดหมู่ที่ครอบคลุมทุกสาขาอาชีพในประเทศไทย</p>
-      </div>
-      <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
-        <div class="text-blue-600 mb-4 text-3xl">
-          <i class="fas fa-chart-line"></i>
-        </div>
-        <h3 class="font-semibold text-lg mb-2">ข้อมูลเชิงลึก</h3>
-        <p class="text-gray-600 text-sm">วิเคราะห์แนวโน้มตลาดงานและให้คำแนะนำที่เป็นประโยชน์สำหรับการพัฒนาอาชีพของคุณ
-        </p>
       </div>
     </div>
   </div>
@@ -235,7 +238,9 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const form = document.getElementById('predictionForm');
+      const employerForm = document.getElementById('employerForm');
       const submitBtn = document.getElementById('submitBtn');
+      const submitEmployerBtn = document.getElementById('submitEmployerBtn');
       const loadingBtn = document.getElementById('loadingBtn');
       const resultsSection = document.getElementById('resultsSection');
       const errorSection = document.getElementById('errorSection');
@@ -246,38 +251,6 @@
       const resultMainOccupation = document.getElementById('resultMainOccupation');
       const resultSubOccupationName = document.getElementById('resultSubOccupationName');
       const resultSubOccupationId = document.getElementById('resultSubOccupationId');
-
-      // Check for URL parameters on page load (for when redirected back after prediction)
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has('job_title')) {
-        const jobTitle = urlParams.get('job_title');
-        const mainOccupation = urlParams.get('main_occupation');
-        const subOccupationName = urlParams.get('sub_occupation_name');
-        const subOccupationId = urlParams.get('sub_occupation_id');
-        const error = urlParams.get('error');
-        
-        // Set the job title in the input field
-        document.getElementById('job_title').value = jobTitle;
-        
-        if (error) {
-          // Show error message
-          errorMessage.textContent = decodeURIComponent(error);
-          errorSection.classList.remove('hidden');
-          resultsSection.classList.add('hidden');
-        } else if (mainOccupation) {
-          // Show results
-          resultJobTitle.textContent = jobTitle;
-          resultMainOccupation.textContent = mainOccupation;
-          resultSubOccupationName.textContent = subOccupationName || 'ไม่พบข้อมูล';
-          resultSubOccupationId.textContent = subOccupationId ? `ID: ${subOccupationId}` : '';
-          
-          resultsSection.classList.remove('hidden');
-          errorSection.classList.add('hidden');
-        }
-        
-        // Clean URL to prevent resubmission on refresh
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
 
       form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -314,14 +287,6 @@
             
             resultsSection.classList.remove('hidden');
             errorSection.classList.add('hidden');
-            
-            // Update URL with parameters (without reloading page)
-            const url = new URL(window.location);
-            url.searchParams.set('job_title', jobTitle);
-            url.searchParams.set('main_occupation', data.main_occupation);
-            if (data.sub_occupation_name) url.searchParams.set('sub_occupation_name', data.sub_occupation_name);
-            if (data.sub_occupation_id) url.searchParams.set('sub_occupation_id', data.sub_occupation_id);
-            window.history.pushState({}, '', url);
           }
         } catch (error) {
           // Show error
@@ -331,6 +296,55 @@
         } finally {
           // Hide loading state
           submitBtn.classList.remove('hidden');
+          loadingBtn.classList.add('hidden');
+        }
+      });
+
+      employerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        submitEmployerBtn.classList.add('hidden');
+        loadingBtn.classList.remove('hidden');
+        errorSection.classList.add('hidden');
+        
+        const jobTitle = document.getElementById('employer_job_title').value;
+        const businessType = document.getElementById('employer_bussiness_type').value;
+        
+        try {
+          const response = await fetch('/ai_predict_occupation/predict/employer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ job_title: jobTitle, bussiness_type: businessType })
+          });
+          
+          const data = await response.json();
+          
+          if (data.error) {
+            // Show error
+            errorMessage.textContent = data.error;
+            errorSection.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+          } else {
+            // Show results
+            resultJobTitle.textContent = jobTitle;
+            resultMainOccupation.textContent = data.main_occupation;
+            resultSubOccupationName.textContent = data.sub_occupation_name || 'ไม่พบข้อมูล';
+            resultSubOccupationId.textContent = data.sub_occupation_id ? `ID: ${data.sub_occupation_id}` : '';
+            
+            resultsSection.classList.remove('hidden');
+            errorSection.classList.add('hidden');
+          }
+        } catch (error) {
+          // Show error
+          errorMessage.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์';
+          errorSection.classList.remove('hidden');
+          resultsSection.classList.add('hidden');
+        } finally {
+          // Hide loading state
+          submitEmployerBtn.classList.remove('hidden');
           loadingBtn.classList.add('hidden');
         }
       });
