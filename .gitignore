@@ -8,3 +8,4 @@ model
 .env
 model_thaibert
 nohup.out
+.DS_Store
