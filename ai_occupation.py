@@ -46,8 +46,9 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=False)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 model.eval()
 
-# === 2. Models ===
-
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "JobBKK AI occupation API"}
 
 # --- Pydantic Models for API Requests ---
 class PredictRequestMember(BaseModel):
