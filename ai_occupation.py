@@ -262,7 +262,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         รายการสาขาอาชีพหลัก:
         {main_list_text}
 
-        อธิบายเหตุผลโดยละเอียดก่อนเลือก แล้วตอบกลับด้วย JSON ในรูปแบบ:
+        สำคัญมาก: ให้ตอบกลับเป็น JSON เท่านั้น ในรูปแบบต่อไปนี้ โดยไม่เพิ่มข้อความอื่นใด:
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
         """
 
@@ -270,27 +270,34 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
             model="gpt-4",
             temperature=0,
             messages=[
-                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานในประเทศไทย ที่มีความเข้าใจลึกซึ้งเกี่ยวกับสาขาอาชีพและคำศัพท์เฉพาะทางในภาษาไทย"},
+                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานในประเทศไทย ที่มีความเข้าใจลึกซึ้งเกี่ยวกับสาขาอาชีพและคำศัพท์เฉพาะทางในภาษาไทย คุณตอบกลับเป็น JSON เท่านั้น ไม่ต้องอธิบายเหตุผล"},
                 {"role": "user", "content": prompt},
             ],
         )
 
         content = completion.choices[0].message.content.strip()
+        
+        # Extract JSON from the response if it's embedded in text
+        import re
+        json_match = re.search(r'\{.*\}', content)
+        if json_match:
+            json_str = json_match.group(0)
+            try:
+                response_data = json.loads(json_str)
+                main_id = response_data.get("id") or response_data.get("occupation_id")
 
-        if not content.startswith("{"):
+                if not main_id:
+                    return None, f"ไม่พบ id จาก GPT: {response_data}"
+
+                for main in main_occupation_list:
+                    if main.occupation_id == main_id:
+                        return main.occupation_id, main.name
+
+                return None, "ไม่พบสาขาหลักที่ตรง"
+            except json.JSONDecodeError:
+                return None, f"ไม่สามารถแปลง JSON ได้: {json_str}"
+        else:
             return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
-
-        response_data = json.loads(content)
-        main_id = response_data.get("id") or response_data.get("occupation_id")
-
-        if not main_id:
-            return None, f"ไม่พบ id จาก GPT: {response_data}"
-
-        for main in main_occupation_list:
-            if main.occupation_id == main_id:
-                return main.occupation_id, main.name
-
-        return None, "ไม่พบสาขาหลักที่ตรง"
 
     except Exception as e:
         return None, f"GPT ERROR: {e}"
