@@ -260,6 +260,49 @@ def generate_description_with_gpt(job_title: str) -> str:
 
     except Exception as e:
         return f"[ERROR] ไม่สามารถสร้างคำอธิบายได้: {e}"
+
+def generate_descriptionsup_with_gpt(job_title: str, main_occupation: str) -> str:
+    """
+    ใช้ GPT สร้างคำอธิบายตำแหน่งงาน (ระดับละเอียด) จากชื่อตำแหน่งและสาขาอาชีพหลัก
+
+    Args:
+        job_title (str): ชื่อตำแหน่งงาน เช่น "ช่างไม้"
+        main_occupation (str): หมวดอาชีพหลัก เช่น "ช่าง/ช่างเทคนิค/อิเลคโทรนิค"
+
+    Returns:
+        str: คำอธิบายตำแหน่งงานที่เน้นทักษะและลักษณะงานเฉพาะ
+    """
+    try:
+        prompt = f"""
+        คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานในประเทศไทย
+
+        โปรดเขียนคำอธิบายตำแหน่งงานในรูปแบบ professional สำหรับตำแหน่ง "{job_title}" 
+        ซึ่งอยู่ภายใต้สาขาอาชีพหลัก "{main_occupation}" โดยอธิบายดังนี้:
+
+        - หน้าที่รับผิดชอบหลัก
+        - ทักษะที่จำเป็น
+        - เครื่องมือหรือเทคโนโลยีที่ใช้บ่อย
+        - ลักษณะงานโดยรวม
+
+        **สำคัญ:** เน้นคำเฉพาะที่สอดคล้องกับหมวด "{main_occupation}" อย่างชัดเจน เช่น ถ้าเป็นงานช่าง ให้ใช้คำว่า "ลงมือปฏิบัติ", "เครื่องมือช่าง", "เทคนิคช่าง", หรือ "งานฝีมือ"
+
+        ใช้ภาษากระชับ ชัดเจน ไม่เกิน 100 คำ
+        """
+
+        completion = client.chat.completions.create(
+            model="gpt-4-turbo",
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการอธิบายตำแหน่งงานในประเทศไทย"},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        content = completion.choices[0].message.content.strip()
+        return content
+
+    except Exception as e:
+        return f"[ERROR] ไม่สามารถสร้างคำอธิบายได้: {e}"
     
 async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
     """
@@ -454,7 +497,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
             ]
         )
         # STEP 1: สร้าง job description
-        job_desc = generate_description_with_gpt(job_title)
+        job_desc = generate_descriptionsup_with_gpt(job_title, main_occupation)
 
         prompt = f"""
         ชื่อตำแหน่งงาน: "{job_title}"
