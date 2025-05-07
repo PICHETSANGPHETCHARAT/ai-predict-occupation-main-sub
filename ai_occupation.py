@@ -263,7 +263,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         {main_list_text}
 
         อธิบายเหตุผลโดยละเอียดก่อนเลือก แล้วตอบกลับด้วย JSON ในรูปแบบ:
-        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก", "reasoning": "เหตุผลในการเลือกสาขานี้"}}
+        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
         """
 
         completion = client.chat.completions.create(
