@@ -346,6 +346,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         5. หากเป็นงานที่เกี่ยวข้องหลายสาย ให้พิจารณาหน้าที่หลักเป็นตัวตัดสิน
         6. หากตำแหน่งมีบทบาทหลักใน “การขาย” แม้จะมีความรู้ด้านเทคนิค ให้จัดอยู่ในหมวด “ขาย”
         7. หากตำแหน่งเกี่ยวข้องกับการใช้ทักษะฝีมือแรงงาน เช่น ช่างไม้ ช่างปูน ช่างแอร์ ให้จัดอยู่ในหมวด "ช่าง/ช่างเทคนิค/อิเลคโทรนิค" ไม่ใช่ "ก่อสร้าง" หรือ "การผลิต"
+        8. หากตำแหน่งมีบทบาทหลักในการควบคุมงานก่อสร้างในสถานที่จริง ให้จัดอยู่ในหมวด "ก่อสร้าง" แม้จะมีการใช้ซอฟต์แวร์ออกแบบร่วมด้วย
 
         รายการสาขาอาชีพหลัก:
         {main_list_text}
@@ -386,6 +387,84 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
                 return None, f"ไม่สามารถแปลง JSON ได้: {json_str}"
         else:
             return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
+
+    except Exception as e:
+        return None, f"GPT ERROR: {e}"
+
+async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupations):
+    """
+    ทำนายตำแหน่งงานย่อยโดยใช้ GPT
+
+    Args:
+        job_title: ชื่อตำแหน่งงาน
+        main_occupation: ชื่อตำแหน่งงานหลัก
+        sub_occupations: รายการตำแหน่งงานย่อย
+
+    Returns:
+        tuple: (occupation_sub_id, occupation_sub_name) หรือ (None, error_message)
+    """
+    try:
+        sub_options = [
+            {"id": sub.occupation_sub_id, "name": sub.name} for sub in sub_occupations
+        ]
+
+        sub_list_text = "\n".join(
+            [
+                f"{i+1}. {json.dumps(option, ensure_ascii=False)}"
+                for i, option in enumerate(sub_options)
+            ]
+        )
+        # STEP 1: สร้าง job description
+        job_desc = generate_descriptionsup_with_gpt(job_title, main_occupation)
+
+        prompt = f"""
+        ชื่อตำแหน่งงาน: "{job_title}"
+        สาขาอาชีพหลัก: "{main_occupation}"
+
+        คำอธิบายตำแหน่งงาน:
+        {job_desc}
+
+        จากรายการตำแหน่งงานย่อยด้านล่าง โปรดเลือกเพียง 1 รายการที่เหมาะสมที่สุดสำหรับตำแหน่งงานนี้ โดยดูจากลักษณะงานจริงในคำอธิบายข้างต้น:
+        หมายเหตุ: หากไม่มีตำแหน่ง "ช่างไม้" โดยตรง ให้เลือกตำแหน่งที่ใกล้เคียงที่สุด เช่น "ช่างเทคนิค"
+
+        {sub_list_text}
+
+        ขั้นตอนการตัดสินใจ:
+        1. พิจารณาหน้าที่หลักของตำแหน่งจากคำอธิบาย
+        2. เปรียบเทียบกับชื่อและขอบเขตของแต่ละตำแหน่งย่อย
+        3. หากชื่อซ้ำซ้อน ให้เลือกจากลักษณะการปฏิบัติงานจริง
+        4. อย่าเลือกโดยอิงจากชื่อเท่านั้น แต่ให้ดูเนื้อหาของงานเป็นหลัก
+
+        กรุณาตอบกลับเพียง 1 บรรทัด เป็น JSON ของตำแหน่งงานย่อยที่คุณเลือก เช่น:
+        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานรอง"}}
+        """
+        
+        print(f"Prompt2: {prompt}")
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0,
+            messages=[
+                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
+                {"role": "user", "content": prompt},
+            ],
+        )
+
+        content = completion.choices[0].message.content.strip()
+        print(f"GPT Response2: {content}")
+        if not content.startswith("{"):
+            return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
+
+        response_data = json.loads(content)
+        sub_id = response_data.get("id") or response_data.get("occupation_sub_id")
+
+        if not sub_id:
+            return None, f"ไม่พบ id จาก GPT: {response_data}"
+
+        for sub in sub_occupations:
+            if sub.occupation_sub_id == sub_id:
+                return sub.occupation_sub_id, sub.name
+
+        return None, "ไม่พบสาขารองที่ตรง"
 
     except Exception as e:
         return None, f"GPT ERROR: {e}"
@@ -471,86 +550,7 @@ async def predict_main_occupation_with_gpt_with_business(
 
     except Exception as e:
         return None, f"GPT ERROR: {e}"
-
-
-async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupations):
-    """
-    ทำนายตำแหน่งงานย่อยโดยใช้ GPT
-
-    Args:
-        job_title: ชื่อตำแหน่งงาน
-        main_occupation: ชื่อตำแหน่งงานหลัก
-        sub_occupations: รายการตำแหน่งงานย่อย
-
-    Returns:
-        tuple: (occupation_sub_id, occupation_sub_name) หรือ (None, error_message)
-    """
-    try:
-        sub_options = [
-            {"id": sub.occupation_sub_id, "name": sub.name} for sub in sub_occupations
-        ]
-
-        sub_list_text = "\n".join(
-            [
-                f"{i+1}. {json.dumps(option, ensure_ascii=False)}"
-                for i, option in enumerate(sub_options)
-            ]
-        )
-        # STEP 1: สร้าง job description
-        job_desc = generate_descriptionsup_with_gpt(job_title, main_occupation)
-
-        prompt = f"""
-        ชื่อตำแหน่งงาน: "{job_title}"
-        สาขาอาชีพหลัก: "{main_occupation}"
-
-        คำอธิบายตำแหน่งงาน:
-        {job_desc}
-
-        จากรายการตำแหน่งงานย่อยด้านล่าง โปรดเลือกเพียง 1 รายการที่เหมาะสมที่สุดสำหรับตำแหน่งงานนี้ โดยดูจากลักษณะงานจริงในคำอธิบายข้างต้น:
-        หมายเหตุ: หากไม่มีตำแหน่ง "ช่างไม้" โดยตรง ให้เลือกตำแหน่งที่ใกล้เคียงที่สุด เช่น "ช่างเทคนิค"
-
-        {sub_list_text}
-
-        ขั้นตอนการตัดสินใจ:
-        1. พิจารณาหน้าที่หลักของตำแหน่งจากคำอธิบาย
-        2. เปรียบเทียบกับชื่อและขอบเขตของแต่ละตำแหน่งย่อย
-        3. หากชื่อซ้ำซ้อน ให้เลือกจากลักษณะการปฏิบัติงานจริง
-        4. อย่าเลือกโดยอิงจากชื่อเท่านั้น แต่ให้ดูเนื้อหาของงานเป็นหลัก
-
-        กรุณาตอบกลับเพียง 1 บรรทัด เป็น JSON ของตำแหน่งงานย่อยที่คุณเลือก เช่น:
-        {{"id": 0, "name": "ตัวอย่างตำแหน่งงานรอง"}}
-        """
-        
-        print(f"Prompt2: {prompt}")
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0,
-            messages=[
-                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
-                {"role": "user", "content": prompt},
-            ],
-        )
-
-        content = completion.choices[0].message.content.strip()
-        print(f"GPT Response2: {content}")
-        if not content.startswith("{"):
-            return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
-
-        response_data = json.loads(content)
-        sub_id = response_data.get("id") or response_data.get("occupation_sub_id")
-
-        if not sub_id:
-            return None, f"ไม่พบ id จาก GPT: {response_data}"
-
-        for sub in sub_occupations:
-            if sub.occupation_sub_id == sub_id:
-                return sub.occupation_sub_id, sub.name
-
-        return None, "ไม่พบสาขารองที่ตรง"
-
-    except Exception as e:
-        return None, f"GPT ERROR: {e}"
-
+    
 
 async def predict_sub_occupation_with_gpt_with_business(
     job_title, main_occupation, sub_occupations, bussiness_type
