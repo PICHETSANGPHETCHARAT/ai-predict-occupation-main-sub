@@ -267,7 +267,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         """
         print(f"Prompt: {prompt}")
         completion = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model="gpt-4.1-mini",
             temperature=0,
             messages=[
                 {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานในประเทศไทย ที่มีความเข้าใจลึกซึ้งเกี่ยวกับสาขาอาชีพและคำศัพท์เฉพาะทางในภาษาไทย คุณตอบกลับเป็น JSON เท่านั้น ไม่ต้องอธิบายเหตุผล"},
