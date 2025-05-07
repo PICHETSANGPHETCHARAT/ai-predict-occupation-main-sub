@@ -422,7 +422,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         กรุณาตอบกลับเพียง 1 บรรทัด โดยให้เป็น JSON ของรายการที่คุณเลือก เช่น:
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานรอง"}}
         """
-
+        print(f"Prompt2: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4.1-mini",
             temperature=0,
@@ -433,7 +433,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         )
 
         content = completion.choices[0].message.content.strip()
-
+        print(f"GPT Response2: {content}")
         if not content.startswith("{"):
             return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
 
