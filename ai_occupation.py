@@ -334,7 +334,13 @@ async def predict_main_occupation_with_gpt_with_business(
         ชื่อตำแหน่งงาน: "{job_title}"
         ประเภทธุรกิจ: "{bussiness_type}"
         
-        จากชื่อตำแหน่งงานและประเภทธุรกิจข้างต้น โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุด โดยพิจารณาจาก ID และชื่อ:
+        จากชื่อตำแหน่งงาน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว
+
+        ขั้นตอนการตัดสินใจ:
+        1. วิเคราะห์ลักษณะงานและทักษะที่จำเป็น
+        2. พิจารณาอุตสาหกรรมที่เกี่ยวข้อง
+        3. ระบุขอบเขตความรับผิดชอบของตำแหน่ง
+        4. เปรียบเทียบกับคำอธิบายสาขาอาชีพในรายการ
 
         {main_list_text}
 
@@ -343,7 +349,7 @@ async def predict_main_occupation_with_gpt_with_business(
         """
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             temperature=0,
             messages=[
                 {
@@ -403,7 +409,13 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         ชื่อตำแหน่งงาน: "{job_title}"
         สาขาอาชีพหลัก: "{main_occupation}"
 
-        จากรายการสาขาอาชีพรองด้านล่างนี้ โปรดเลือกเพียง 1 รายการที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว โดยพิจารณาจาก ID และชื่อ:
+        จากชื่อตำแหน่งงาน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว
+
+        ขั้นตอนการตัดสินใจ:
+        1. วิเคราะห์ลักษณะงานและทักษะที่จำเป็น
+        2. พิจารณาอุตสาหกรรมที่เกี่ยวข้อง
+        3. ระบุขอบเขตความรับผิดชอบของตำแหน่ง
+        4. เปรียบเทียบกับคำอธิบายสาขาอาชีพในรายการ
 
         {sub_list_text}
 
@@ -412,7 +424,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         """
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             temperature=0,
             messages=[
                 {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
@@ -482,7 +494,7 @@ async def predict_sub_occupation_with_gpt_with_business(
         """
 
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             temperature=0,
             messages=[
                 {
