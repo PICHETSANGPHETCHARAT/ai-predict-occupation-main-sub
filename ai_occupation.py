@@ -356,7 +356,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         สำคัญมาก: ให้ตอบกลับเป็น JSON เท่านั้น ในรูปแบบต่อไปนี้ โดยไม่เพิ่มข้อความอื่นใด:
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
         """
-        print(f"Prompt: {prompt}")
+        # print(f"Prompt: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
@@ -367,7 +367,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         )
 
         content = completion.choices[0].message.content.strip()
-        print(f"GPT Response: {content}")
+        # print(f"GPT Response: {content}")
         # Extract JSON from the response if it's embedded in text
         import re
         json_match = re.search(r'\{.*\}', content)
@@ -441,7 +441,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานรอง"}}
         """
         
-        print(f"Prompt2: {prompt}")
+        # print(f"Prompt2: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0,
@@ -452,7 +452,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         )
 
         content = completion.choices[0].message.content.strip()
-        print(f"GPT Response2: {content}")
+        # print(f"GPT Response2: {content}")
         if not content.startswith("{"):
             return None, f"GPT ตอบกลับไม่ใช่ JSON: {content}"
 
@@ -503,7 +503,8 @@ async def predict_main_occupation_with_gpt_with_business(
         ชื่อตำแหน่งงาน: "{job_title}"
         ประเภทธุรกิจ: "{bussiness_type}"
         
-        จากชื่อตำแหน่งงาน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว
+        จากคำอธิบายด้านบน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดจากรายการต่อไปนี้
+        หมายเหตุ: ผู้จัดการโรงงาน เป็นตำแหน่งบริหารระดับองค์กร ไม่ใช่ผู้ปฏิบัติงานด้านการผลิตโดยตรง
 
         ขั้นตอนการตัดสินใจ:
         1. วิเคราะห์ลักษณะงานและทักษะที่จำเป็น
@@ -513,11 +514,13 @@ async def predict_main_occupation_with_gpt_with_business(
         5. หากเป็นงานที่เกี่ยวข้องหลายสาย ให้พิจารณาหน้าที่หลักเป็นตัวตัดสิน
         6. หากตำแหน่งมีบทบาทหลักใน “การขาย” แม้จะมีความรู้ด้านเทคนิค ให้จัดอยู่ในหมวด “ขาย”
         7. หากตำแหน่งเกี่ยวข้องกับการใช้ทักษะฝีมือแรงงาน เช่น ช่างไม้ ช่างปูน ช่างแอร์ ให้จัดอยู่ในหมวด "ช่าง/ช่างเทคนิค/อิเลคโทรนิค" ไม่ใช่ "ก่อสร้าง" หรือ "การผลิต"
+        8. หากตำแหน่งมีบทบาทหลักในการควบคุมงานก่อสร้างในสถานที่จริง ให้จัดอยู่ในหมวด "ก่อสร้าง" แม้จะมีการใช้ซอฟต์แวร์ออกแบบร่วมด้วย
+        9. หากตำแหน่งมีบทบาทเป็นผู้บริหารระดับกลางถึงสูง เช่น ผู้จัดการ ผู้ช่วยผู้จัดการ ให้จัดอยู่ในหมวด "บริหาร/ผู้จัดการ" แม้จะดูแลสายการผลิตหรือฝ่ายอื่นๆ
 
-
+        รายการสาขาอาชีพหลัก:
         {main_list_text}
 
-        กรุณาตอบกลับเพียง 1 บรรทัด โดยให้เป็น JSON ของรายการที่คุณเลือก เช่น:
+        สำคัญมาก: ให้ตอบกลับเป็น JSON เท่านั้น ในรูปแบบต่อไปนี้ โดยไม่เพิ่มข้อความอื่นใด:
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
         """
 
@@ -580,17 +583,28 @@ async def predict_sub_occupation_with_gpt_with_business(
                 for i, option in enumerate(sub_options)
             ]
         )
-
+        # STEP 1: สร้าง job description
+        job_desc = generate_descriptionsup_with_gpt(job_title, main_occupation)
         prompt = f"""
         ชื่อตำแหน่งงาน: "{job_title}"
         ประเภทธุรกิจ: "{bussiness_type}"
         สาขาอาชีพหลัก: "{main_occupation}"
 
-        จากรายการสาขาอาชีพรองด้านล่างนี้ โปรดเลือกเพียง 1 รายการที่เหมาะสมที่สุดสำหรับตำแหน่งงานและประเภทธุรกิจดังกล่าว โดยพิจารณาจาก ID และชื่อ:
+        คำอธิบายตำแหน่งงาน:
+        {job_desc}
+
+        จากรายการตำแหน่งงานย่อยด้านล่าง โปรดเลือกเพียง 1 รายการที่เหมาะสมที่สุดสำหรับตำแหน่งงานนี้ โดยดูจากลักษณะงานจริงในคำอธิบายข้างต้น:
+        หมายเหตุ: หากไม่มีตำแหน่ง "ช่างไม้" โดยตรง ให้เลือกตำแหน่งที่ใกล้เคียงที่สุด เช่น "ช่างเทคนิค"
 
         {sub_list_text}
 
-        กรุณาตอบกลับเพียง 1 บรรทัด โดยให้เป็น JSON ของรายการที่คุณเลือก เช่น:
+        ขั้นตอนการตัดสินใจ:
+        1. พิจารณาหน้าที่หลักของตำแหน่งจากคำอธิบาย
+        2. เปรียบเทียบกับชื่อและขอบเขตของแต่ละตำแหน่งย่อย
+        3. หากชื่อซ้ำซ้อน ให้เลือกจากลักษณะการปฏิบัติงานจริง
+        4. อย่าเลือกโดยอิงจากชื่อเท่านั้น แต่ให้ดูเนื้อหาของงานเป็นหลัก
+
+        กรุณาตอบกลับเพียง 1 บรรทัด เป็น JSON ของตำแหน่งงานย่อยที่คุณเลือก เช่น:
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานรอง"}}
         """
 
