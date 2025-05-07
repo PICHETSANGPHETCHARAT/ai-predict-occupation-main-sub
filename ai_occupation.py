@@ -276,7 +276,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         )
 
         content = completion.choices[0].message.content.strip()
-        
+        print(f"GPT Response: {content}")
         # Extract JSON from the response if it's embedded in text
         import re
         json_match = re.search(r'\{.*\}', content)
