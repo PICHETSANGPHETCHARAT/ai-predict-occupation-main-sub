@@ -265,7 +265,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         สำคัญมาก: ให้ตอบกลับเป็น JSON เท่านั้น ในรูปแบบต่อไปนี้ โดยไม่เพิ่มข้อความอื่นใด:
         {{"id": 0, "name": "ตัวอย่างตำแหน่งงานหลัก"}}
         """
-
+        print(f"Prompt: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4-turbo",
             temperature=0,
