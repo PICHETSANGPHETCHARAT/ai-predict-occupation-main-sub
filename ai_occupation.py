@@ -909,4 +909,4 @@ async def predict_employer_api(data: PredictRequestEmployer):
 
 # === 6. Main Function ===
 if __name__ == "__main__":
-    uvicorn.run("ai_occupation:app", host="10.100.100.208", port=8004, reload=True)
+    uvicorn.run("ai_occupation:app", host="0.0.0.0", port=8004, reload=True)
