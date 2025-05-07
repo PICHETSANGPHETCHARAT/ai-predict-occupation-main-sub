@@ -268,7 +268,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         print(f"Prompt: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4o",
-            temperature=0,
+            temperature=0.3,
             messages=[
                 {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานในประเทศไทย ที่มีความเข้าใจลึกซึ้งเกี่ยวกับสาขาอาชีพและคำศัพท์เฉพาะทางในภาษาไทย คุณตอบกลับเป็น JSON เท่านั้น ไม่ต้องอธิบายเหตุผล"},
                 {"role": "user", "content": prompt},
@@ -350,7 +350,7 @@ async def predict_main_occupation_with_gpt_with_business(
 
         completion = client.chat.completions.create(
             model="gpt-4o",
-            temperature=0,
+            temperature=0.3,
             messages=[
                 {
                     "role": "system",
@@ -425,7 +425,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         print(f"Prompt2: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4o",
-            temperature=0,
+            temperature=0.3,
             messages=[
                 {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
                 {"role": "user", "content": prompt},
@@ -495,7 +495,7 @@ async def predict_sub_occupation_with_gpt_with_business(
 
         completion = client.chat.completions.create(
             model="gpt-4o",
-            temperature=0,
+            temperature=0.3,
             messages=[
                 {
                     "role": "system",
