@@ -225,6 +225,42 @@ async def predict_with_thaibert(job_title: str):
 
 
 # --- GPT Prediction Functions ---
+def generate_description_with_gpt(job_title: str) -> str:
+    """
+    ใช้ GPT สร้างคำอธิบายตำแหน่งงานจากชื่ออาชีพ
+
+    Args:
+        job_title (str): ชื่อตำแหน่งงาน เช่น "ช่างไม้"
+
+    Returns:
+        str: คำอธิบายตำแหน่งงาน (Job Description)
+    """
+    try:
+        prompt = f"""
+        โปรดเขียนคำอธิบายตำแหน่งงานสำหรับ "{job_title}" โดยระบุ:
+        - หน้าที่รับผิดชอบหลัก
+        - ทักษะที่จำเป็น
+        - เครื่องมือหรือเทคโนโลยีที่ใช้บ่อย
+        - ลักษณะงานโดยรวม
+
+        ให้เขียนในรูปแบบทางการ ใช้ภาษาธรรมดา กระชับ และเข้าใจง่าย ความยาวไม่เกิน 100 คำ
+        """
+
+        completion = client.chat.completions.create(
+            model="gpt-4-turbo",  # หรือ gpt-4o ก็ได้
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการอธิบายตำแหน่งงานในประเทศไทย"},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        content = completion.choices[0].message.content.strip()
+        return content
+
+    except Exception as e:
+        return f"[ERROR] ไม่สามารถสร้างคำอธิบายได้: {e}"
+    
 async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
     """
     ทำนายตำแหน่งงานหลักโดยใช้ GPT
@@ -248,10 +284,16 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
                 for i, option in enumerate(main_options)
             ]
         )
+        # STEP 1: สร้าง job description
+        job_desc = generate_description_with_gpt(job_title)
 
         prompt = f"""
-        ชื่อตำแหน่งงาน: "{job_title}"
-        จากชื่อตำแหน่งงาน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดสำหรับตำแหน่งงานดังกล่าว
+        ตำแหน่งงาน: "{job_title}"
+
+        คำอธิบายตำแหน่งงาน:
+        {job_desc}
+
+        จากคำอธิบายด้านบน โปรดเลือกเพียง 1 สาขาอาชีพหลักที่เหมาะสมที่สุดจากรายการต่อไปนี้
 
         ขั้นตอนการตัดสินใจ:
         1. วิเคราะห์ลักษณะงานและทักษะที่จำเป็น
@@ -268,7 +310,7 @@ async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
         print(f"Prompt: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            temperature=1,
+            temperature=0,
             messages=[
                 {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงานในประเทศไทย ที่มีความเข้าใจลึกซึ้งเกี่ยวกับสาขาอาชีพและคำศัพท์เฉพาะทางในภาษาไทย คุณตอบกลับเป็น JSON เท่านั้น ไม่ต้องอธิบายเหตุผล"},
                 {"role": "user", "content": prompt},
@@ -350,7 +392,7 @@ async def predict_main_occupation_with_gpt_with_business(
 
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            temperature=1,
+            temperature=0,
             messages=[
                 {
                     "role": "system",
@@ -425,7 +467,7 @@ async def predict_sub_occupation_with_gpt(job_title, main_occupation, sub_occupa
         print(f"Prompt2: {prompt}")
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            temperature=1,
+            temperature=0,
             messages=[
                 {"role": "system", "content": "คุณคือ HR ผู้เชี่ยวชาญด้านการวิเคราะห์ตำแหน่งงาน"},
                 {"role": "user", "content": prompt},
@@ -495,7 +537,7 @@ async def predict_sub_occupation_with_gpt_with_business(
 
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
-            temperature=1,
+            temperature=0,
             messages=[
                 {
                     "role": "system",
