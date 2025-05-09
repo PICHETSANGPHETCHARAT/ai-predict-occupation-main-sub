@@ -2,17 +2,14 @@
 JobBKK AI Occupation Prediction API
 ------------------------------
 API สำหรับทำนายตำแหน่งงานหลักและตำแหน่งงานย่อยด้วย AI
-รองรับทั้งการใช้งานผ่าน AI model (ThaiBERT) และ GPT
+รองรับทั้งการใช้งานผ่าน AI GPT
 """
 
 # === 1. การ import และตั้งค่าเริ่มต้น ===
 from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from pydantic import BaseModel
-import torch
-import pickle
 import mysql.connector
 import json
 from openai import OpenAI
@@ -36,15 +33,6 @@ app = FastAPI(
     root_path="/ai_predict_occupation",
 )
 templates = Jinja2Templates(directory="templates")
-
-# === Load ML Model & Label Encoder ===
-MODEL_PATH = "./model/model_thaibert_v2"
-with open(os.path.join(MODEL_PATH, "labels.pkl"), "rb") as f:
-    label_encoder = pickle.load(f)
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, use_fast=False)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-model.eval()
 
 @app.get("/health")
 async def health_check():
@@ -201,29 +189,6 @@ async def get_occupation_main():
 
 
 # === 4. Prediction Functions ===
-
-
-# --- ThaiBERT Prediction ---
-async def predict_with_thaibert(job_title: str):
-    """
-    ทำนายตำแหน่งงานหลักโดยใช้โมเดล ThaiBERT
-
-    Args:
-        job_title: ชื่อตำแหน่งงาน
-
-    Returns:
-        str: ชื่อตำแหน่งงานหลักที่ทำนาย
-    """
-    inputs = tokenizer(
-        job_title, return_tensors="pt", truncation=True, padding=True, max_length=64
-    )
-    with torch.no_grad():
-        outputs = model(**inputs)
-        predicted_class_id = torch.argmax(outputs.logits, dim=1).item()
-        main_occupation = label_encoder.inverse_transform([predicted_class_id])[0]
-    return main_occupation
-
-
 # --- GPT Prediction Functions ---
 async def predict_main_occupation_with_gpt(job_title, main_occupation_list):
     """
@@ -501,106 +466,6 @@ async def predict_sub_occupation_with_gpt_with_business(
 
 
 # --- Main prediction handlers ---
-async def handle_prediction_thaibert(
-    request: Request, job_title: str, render_html: bool
-):
-    """
-    จัดการกระบวนการทำนายโดยใช้ ThaiBERT
-
-    Args:
-        request: FastAPI Request
-        job_title: ชื่อตำแหน่งงาน
-        render_html: True หากต้องการ render HTML, False หากต้องการ JSON
-
-    Returns:
-        HTML/JSON response
-    """
-    conn = None
-    cursor = None
-    try:
-        # ทำนายตำแหน่งงานหลักด้วย ThaiBERT
-        main_occupation = await predict_with_thaibert(job_title)
-
-        # ค้นหา occupation_id จากชื่อที่ทำนายได้
-        conn = get_db_connection_120other()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(
-            """
-            SELECT od.occupation_id 
-            FROM occupation_description od 
-            JOIN occupation o ON od.occupation_id = o.id
-            WHERE od.name = %s 
-            AND od.language_id = 1 
-            AND o.is_online = '1' 
-            AND o.is_status = '1' 
-            AND o.is_flags = '0'
-            LIMIT 1
-            """,
-            (main_occupation,),
-        )
-        row = cursor.fetchone()
-        if not row:
-            msg = f"ไม่พบรหัส occupation_id สำหรับ '{main_occupation}'"
-            if render_html:
-                return templates.TemplateResponse(
-                    "index.html", {"request": request, "error": msg}
-                )
-            return JSONResponse(content={"error": msg}, status_code=404)
-
-        occupation_id = row["occupation_id"]
-
-        cursor.close()
-        conn.close()
-
-        # ทำนายตำแหน่งงานย่อยด้วย GPT
-        sub_occupations = await get_occupation_subs(occupation_id)
-        sub_id, sub_name = await predict_sub_occupation_with_gpt(
-            job_title, main_occupation, sub_occupations
-        )
-
-        # สร้างการตอบกลับตามรูปแบบที่ต้องการ
-        if render_html:
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "job_title": job_title,
-                    "occupation_id": occupation_id,
-                    "main_occupation": main_occupation,
-                    "sub_occupation_id": sub_id,
-                    "sub_occupation_name": sub_name,
-                },
-            )
-        else:
-            return {
-                "job_title": job_title,
-                "main_occupation": main_occupation,
-                "occupation_id": occupation_id,
-                "sub_occupation_id": sub_id,
-                "sub_occupation_name": sub_name,
-            }
-
-    except Exception as e:
-        if render_html:
-            return templates.TemplateResponse(
-                "index.html", {"request": request, "error": f"เกิดข้อผิดพลาด: {str(e)}"}
-            )
-        return JSONResponse(
-            content={"error": f"เกิดข้อผิดพลาด: {str(e)}"}, status_code=500
-        )
-    finally:
-        if cursor:
-            try:
-                cursor.close()
-            except:
-                pass
-        if conn:
-            try:
-                conn.close()
-            except:
-                pass
-
-
 async def handle_prediction_gpt(
     request: Request, job_title: str, render_html: bool, bussiness_type: str = None
 ):
@@ -694,7 +559,7 @@ async def form_post(request: Request, job_title: str = Form(...)):
     """
     API สำหรับรับข้อมูลจากฟอร์มและส่งกลับผลการทำนายในรูปแบบ HTML
     """
-    return await handle_prediction_thaibert(request, job_title, render_html=True)
+    return await handle_prediction_gpt(request, job_title, render_html=True)
 
 
 @app.post("/predict/member")
@@ -721,7 +586,7 @@ async def predict_member_api(data: PredictRequestMember):
     except Exception as e:
         # ถ้า GPT มีปัญหา ให้ใช้ ThaiBERT แทน
         print(f"GPT prediction failed: {str(e)}, falling back to ThaiBERT")
-        result = await handle_prediction_thaibert(None, job_title, render_html=False)
+        result = await handle_prediction_gpt(None, job_title, render_html=False)
         return result
 
 
@@ -762,7 +627,7 @@ async def predict_employer_api(data: PredictRequestEmployer):
         print(
             f"GPT prediction with business type failed: {str(e)}, falling back to ThaiBERT"
         )
-        result = await handle_prediction_thaibert(None, job_title, render_html=False)
+        result = await handle_prediction_gpt(None, job_title, render_html=False)
         return result
 
 
