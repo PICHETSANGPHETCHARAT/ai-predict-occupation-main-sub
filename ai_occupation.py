@@ -661,6 +661,10 @@ async def stream_with_heartbeat(work_coro, build_payload, on_error=None, interva
             yield b" "
         result = task.result()
         yield json.dumps(build_payload(result), ensure_ascii=False).encode("utf-8")
+    except (asyncio.CancelledError, GeneratorExit):
+        if not task.done():
+            task.cancel()
+        raise
     except Exception as exc:
         payload = on_error(exc) if on_error else {"success": False, "error": str(exc)}
         yield json.dumps(payload, ensure_ascii=False).encode("utf-8")
