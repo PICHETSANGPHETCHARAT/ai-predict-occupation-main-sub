@@ -11,20 +11,24 @@ from typing import Optional, Dict
 from enum import Enum
 import logging
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 MONGODB_CONFIG = {
-    'host': '10.100.100.215',
-    'port': 27017,
-    'username': "pichet",
-    'password': "Pichet1234!",
-    'database': 'mydb',
-    'auth_source': 'mydb',
+    'host': os.getenv("MONGO_HOST", "10.100.100.215"),
+    'port': int(os.getenv("MONGO_PORT", "27017")),
+    'username': os.getenv("MONGO_USER"),
+    'password': os.getenv("MONGO_PASS"),
+    'database': os.getenv("MONGO_DB", "mydb"),
+    'auth_source': os.getenv("MONGO_AUTH_SOURCE", "mydb"),
 }
 
 COLLECTION_SUCCESS = 'ai_predict_occupation_main_sub_log'
@@ -49,6 +53,14 @@ class MongoDBClient:
         return cls._instance
 
     def _connect(self):
+        if not MONGODB_CONFIG.get('username') or not MONGODB_CONFIG.get('password'):
+            logger.warning(
+                "MongoDB credentials not set (MONGO_USER/MONGO_PASS env vars) — "
+                "API logging disabled, service จะรันต่อปกติ"
+            )
+            self._client = None
+            self._db = None
+            return
         try:
             uri = (
                 f"mongodb://{MONGODB_CONFIG['username']}:{MONGODB_CONFIG['password']}"
