@@ -38,6 +38,7 @@ openai
 packaging
 pydantic
 pydantic-core
+pymongo
 python-dotenv
 python-multipart
 PyYAML
